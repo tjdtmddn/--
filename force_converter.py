@@ -1,8 +1,10 @@
 import ast
+import csv
+import json
 import math
 import operator
 import tkinter as tk
-from tkinter import ttk
+from tkinter import filedialog, ttk
 
 
 CATEGORIES = {
@@ -13,8 +15,13 @@ CATEGORIES = {
     "면적": {"mm²": (1e-6, "제곱밀리미터"), "cm²": (1e-4, "제곱센티미터"), "m²": (1, "제곱미터"), "km²": (1e6, "제곱킬로미터"), "in²": (0.00064516, "제곱인치"), "ft²": (0.09290304, "제곱피트")},
     "부피": {"mL": (1e-6, "밀리리터"), "L": (0.001, "리터"), "m³": (1, "세제곱미터"), "in³": (1.6387064e-5, "세제곱인치"), "ft³": (0.028316846592, "세제곱피트")},
     "속도": {"m/s": (1, "미터/초"), "km/h": (1 / 3.6, "킬로미터/시"), "mph": (0.44704, "마일/시"), "knot": (0.5144444444444444, "노트")},
+    "시간": {"s": (1, "초"), "min": (60, "분"), "h": (3600, "시간"), "day": (86400, "일")},
+    "에너지": {"J": (1, "줄"), "kJ": (1000, "킬로줄"), "Wh": (3600, "와트시"), "kWh": (3.6e6, "킬로와트시"), "kcal": (4184, "킬로칼로리")},
+    "일률": {"W": (1, "와트"), "kW": (1000, "킬로와트"), "MW": (1e6, "메가와트"), "hp": (745.6998715822702, "마력")},
+    "토크": {"N·m": (1, "뉴턴미터"), "kN·m": (1000, "킬로뉴턴미터"), "kgf·m": (9.80665, "킬로그램힘미터"), "lbf·ft": (1.3558179483314004, "파운드힘피트")},
 }
 TEMPERATURES = {"°C": "섭씨", "°F": "화씨", "K": "켈빈"}
+SETTINGS_FILE = "calculator_settings.json"
 
 
 def convert_temperature(value, source, target):
@@ -105,9 +112,11 @@ class CalculatorApp:
         self.conversion_status = tk.StringVar()
         self.expression_status = tk.StringVar()
         self.memory_text = tk.StringVar(value="메모리: 0")
+        self.load_settings()
         self.build()
         self.apply_theme()
         root.bind("<Return>", self.enter)
+        root.protocol("WM_DELETE_WINDOW", self.close)
 
     def build(self):
         main = ttk.Frame(self.root, padding=16)
@@ -174,7 +183,10 @@ class CalculatorApp:
         scroll = ttk.Scrollbar(history, command=self.conversion_list.yview)
         scroll.pack(side="right", fill="y")
         self.conversion_list.config(yscrollcommand=scroll.set)
-        ttk.Button(tab, text="변환 기록 전체 삭제", command=self.clear_conversion_history).pack(anchor="e", pady=(6, 0))
+        history_buttons = ttk.Frame(tab)
+        history_buttons.pack(fill="x", pady=(6, 0))
+        ttk.Button(history_buttons, text="CSV로 저장", command=self.export_conversion_history).pack(side="left")
+        ttk.Button(history_buttons, text="변환 기록 전체 삭제", command=self.clear_conversion_history).pack(side="right")
 
     def build_calculator(self):
         tab = self.calculator_tab
@@ -226,6 +238,7 @@ class CalculatorApp:
         utility_row.pack(fill="x", pady=(0, 10))
         self.make_calculator_button(utility_row, "초기화", self.clear_expression, "utility").pack(side="left", fill="x", expand=True, padx=(0, 4))
         self.make_calculator_button(utility_row, "결과 복사", self.copy_expression, "utility").pack(side="left", fill="x", expand=True, padx=4)
+        self.make_calculator_button(utility_row, "CSV 저장", self.export_expression_history, "utility").pack(side="left", fill="x", expand=True, padx=4)
         self.make_calculator_button(utility_row, "기록 삭제", self.clear_expression_history, "utility").pack(side="left", fill="x", expand=True, padx=(4, 0))
 
         history = ttk.LabelFrame(tab, text="계산 기록 (더블클릭하면 복원)", padding=8)
@@ -360,6 +373,20 @@ class CalculatorApp:
         self.conversion_history.clear()
         self.conversion_list.delete(0, tk.END)
 
+    def export_conversion_history(self):
+        if not self.conversion_history:
+            self.conversion_status.set("저장할 변환 기록이 없습니다.")
+            return
+        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV 파일", "*.csv"), ("모든 파일", "*.*")])
+        if not path:
+            return
+        with open(path, "w", newline="", encoding="utf-8-sig") as file:
+            writer = csv.writer(file)
+            writer.writerow(["분야", "값", "입력 단위", "변환 단위", "결과"])
+            for item in self.conversion_history:
+                writer.writerow([item["category"], item["value"], item["source"], item["target"], item["text"]])
+        self.conversion_status.set("변환 기록을 CSV 파일로 저장했습니다.")
+
     def calculate_expression(self):
         self.expression_status.set("")
         text = self.expression.get().strip()
@@ -407,6 +434,20 @@ class CalculatorApp:
         self.expression_history.clear()
         self.expression_list.delete(0, tk.END)
 
+    def export_expression_history(self):
+        if not self.expression_history:
+            self.expression_status.set("저장할 계산 기록이 없습니다.")
+            return
+        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV 파일", "*.csv"), ("모든 파일", "*.*")])
+        if not path:
+            return
+        with open(path, "w", newline="", encoding="utf-8-sig") as file:
+            writer = csv.writer(file)
+            writer.writerow(["수식", "결과"])
+            for item in self.expression_history:
+                writer.writerow([item["expression"], item["text"]])
+        self.expression_status.set("계산 기록을 CSV 파일로 저장했습니다.")
+
     def memory_clear(self):
         self.memory = 0.0
         self.memory_text.set("메모리: 0")
@@ -424,6 +465,48 @@ class CalculatorApp:
         if self.expression_result is not None:
             self.memory -= self.expression_result
             self.memory_text.set(f"메모리: {self.memory:.12g}")
+
+    def load_settings(self):
+        try:
+            with open(SETTINGS_FILE, encoding="utf-8") as file:
+                settings = json.load(file)
+            category = settings.get("category")
+            if category in list(CATEGORIES) + ["온도"]:
+                self.category.set(category)
+            if isinstance(settings.get("source"), str):
+                self.source.set(settings["source"])
+            if isinstance(settings.get("target"), str):
+                self.target.set(settings["target"])
+            places = settings.get("places")
+            if isinstance(places, int) and 0 <= places <= 12:
+                self.places.set(places)
+            if settings.get("notation") in ("일반 표기", "과학적 표기"):
+                self.notation.set(settings["notation"])
+            if settings.get("angle") in ("DEG", "RAD"):
+                self.angle.set(settings["angle"])
+            self.dark = bool(settings.get("dark", self.dark))
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+
+    def save_settings(self):
+        settings = {
+            "category": self.category.get(),
+            "source": self.source.get(),
+            "target": self.target.get(),
+            "places": self.places.get(),
+            "notation": self.notation.get(),
+            "angle": self.angle.get(),
+            "dark": self.dark,
+        }
+        try:
+            with open(SETTINGS_FILE, "w", encoding="utf-8") as file:
+                json.dump(settings, file, ensure_ascii=False, indent=2)
+        except OSError:
+            pass
+
+    def close(self):
+        self.save_settings()
+        self.root.destroy()
 
     def enter(self, event=None):
         if self.tabs.index(self.tabs.select()) == 0:

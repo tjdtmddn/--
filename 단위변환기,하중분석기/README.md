@@ -7,6 +7,17 @@
 - 단위 변환
 - 공학용 수식 계산
 
+### 처음 설치
+
+저장소를 처음 받았거나 `.venv`가 없는 경우, 저장소 폴더에서 다음 명령을 한 번 실행합니다.
+
+```powershell
+py -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
+```
+
+`tkinter`는 Python 설치에 포함된 표준 라이브러리이므로 별도 pip 설치가 필요하지 않습니다.
+
 ### 실행 환경
 
 - Python 실행 환경
@@ -20,7 +31,7 @@
 작업 폴더에서 다음 명령을 실행합니다.
 
 ```bash
-python force_converter.py
+.\.venv\Scripts\python.exe ".\단위변환기\force_converter.py"
 ```
 
 Windows 환경에서 `python` 명령을 사용할 수 없는 경우에는 Python 실행 파일에 맞는 명령으로 실행합니다.
@@ -130,7 +141,7 @@ stress_MPa = force_N / AREA_MM2
 설치 명령:
 
 ```powershell
-python -m pip install pandas matplotlib
+.\.venv\Scripts\python.exe -m pip install -r .\requirements.txt
 ```
 
 ### 실행 명령
@@ -138,14 +149,49 @@ python -m pip install pandas matplotlib
 기본 입력인 `load_data.csv`로 실행:
 
 ```powershell
-.\.venv\Scripts\python.exe .\load_analyzer.py
+.\.venv\Scripts\python.exe ".\하중 분석기\load_analyzer.py"
 ```
 
 다른 CSV 파일로 실행:
 
 ```powershell
-.\.venv\Scripts\python.exe .\load_analyzer.py .\load_bad.csv
+.\.venv\Scripts\python.exe ".\하중 분석기\load_analyzer.py" ".\하중 분석기\load_bad.csv"
 ```
+
+### GUI 실행
+
+CSV 파일을 선택하고 유효 데이터 수와 시간–하중 그래프를 확인하려면 다음 명령을 실행합니다.
+
+```powershell
+.\.venv\Scripts\python.exe ".\하중 분석기\load_analyzer_gui.py"
+```
+
+Windows에서는 `하중 분석기\run_load_analyzer_gui.bat` 파일을 더블클릭해도 실행할 수 있습니다. 이 실행 파일은 프로젝트의 `.venv` Python 환경을 자동으로 사용합니다.
+
+VS Code에서 `하중 분석기\load_analyzer_gui.py`를 열고 우측 상단의 `Run Python File` 버튼으로 실행할 수도 있습니다. 두 workspace 설정은 쉼표가 포함된 폴더 경로의 PowerShell 해석 문제를 피하기 위해 상위 환경인 `C:\Users\seung\Desktop\코딩\.venv\Scripts\python.exe`를 사용합니다. 설정이 바로 반영되지 않으면 VS Code를 다시 로드하거나 `Python: Select Interpreter`에서 해당 `.venv`를 선택하세요.
+
+GUI 상단의 `CSV 찾아보기` 버튼으로 CSV 파일을 선택하면 읽기 전용 경로 표시 칸과 유효 데이터 수가 갱신됩니다. 단면 종류에 따라 필요한 치수 입력칸만 표시되며, 모든 치수는 mm, 단면적은 mm²로 계산합니다. 지원 단면과 계산식은 다음과 같습니다.
+
+| 단면 | 입력 치수 | 단면적 |
+| --- | --- | --- |
+| 사각형 | 폭 `b`, 높이 `h` | `A = b × h` |
+| 원형봉 | 지름 `d` | `A = π × d² / 4` |
+| 원형관 | 외경 `D`, 두께 `t` | `A = π × [D² − (D − 2t)²] / 4` |
+| 사각형관 | 외측폭 `B`, 외측높이 `H`, 두께 `t` | `A = B × H − (B − 2t) × (H − 2t)` |
+| H형강 | 전체높이 `H`, 플랜지폭 `B`, 웨브두께 `tw`, 플랜지두께 `tf` | `A = 2 × B × tf + (H − 2tf) × tw` |
+
+원형관은 `D > 0`, `t > 0`, `2t < D`, 사각형관은 모든 치수가 양수이고 `2t < B`, `2t < H`, H형강은 모든 치수가 양수이고 `2tf < H`, `tw < B`인 경우에만 분석합니다. 분석 후 최대 응력과 해당 시간을 표시하고, 하단에는 `Time (s)`와 `Stress (MPa)` 축을 사용하는 시간–응력 그래프를 표시합니다.
+
+### 이상화 단면 가정
+
+GUI의 단면적은 하중이 단면 전체에 균일하게 전달되는 이상화된 축방향 하중 모델로 계산합니다. 따라서 응력은 `σ = F / A`인 평균 정상응력이며, 다음 효과는 고려하지 않습니다.
+
+- 굽힘, 전단, 비틀림 및 좌굴
+- 응력집중, 모서리 형상, 용접부 및 국부 좌굴
+- 재료의 탄성·소성 거동과 안전율
+- 단면 치수의 공차와 하중 방향에 따른 비대칭 효과
+
+단면적은 입력한 외형과 두께로부터 계산하며, 원형관과 사각형관은 균일한 벽 두께, H형강은 일정한 플랜지·웨브 두께를 가정합니다. 치수는 모두 `mm`, 단면적은 `mm²`, 하중은 `N`, 응력은 `MPa`입니다. `1 N/mm² = 1 MPa` 관계를 사용합니다.
 
 ### 단면적 설정
 
@@ -174,13 +220,26 @@ AREA_MM2 = 100
 - 문제가 있는 행은 계산과 그래프에서 제외합니다.
 - 제외한 행 수와 유효한 데이터 수를 출력합니다.
 - 유효한 데이터가 하나도 없으면 계산과 그래프 생성을 중단합니다.
+- GUI에서 새 CSV를 선택하면 이전 단면적, 최대 응력, 그래프를 지우고 새 데이터로 다시 분석해야 합니다.
+- GUI에서 단면 종류나 치수를 변경하면 기존 결과를 무효화하고 `조건변경됨: 다시 분석 필요`를 표시합니다.
+- 숫자가 아닌 치수, 빈 치수, 0 이하의 치수, 무한대 치수는 오류로 처리합니다.
+- 원형관, 사각형관, H형강의 유효 치수 조건을 만족하지 않으면 오류를 표시하고 분석하지 않습니다.
+- 오류가 발생한 CSV나 치수 입력은 이전 분석 결과로 대체되지 않습니다.
 - 원본 입력 CSV는 수정하지 않습니다.
 
 ## 파일 구성
 
 ```text
-force_converter.py  # 단위 변환기 및 공학용 계산기
-load_analyzer.py    # CSV 하중 분석기
-load_data.csv       # 기본 입력 CSV
+requirements.txt    # Python 외부 패키지 목록
 README.md           # 사용 설명서
+
+단위변환기/
+├─ force_converter.py       # 단위 변환기 및 공학용 계산기
+└─ run_force_converter.bat  # 단위 변환기 실행 파일
+
+하중 분석기/
+├─ load_analyzer.py         # CSV 하중 분석기
+├─ load_analyzer_gui.py     # CSV 하중 분석기 GUI
+├─ load_data.csv            # 기본 입력 CSV
+└─ run_load_analyzer_gui.bat # GUI 실행 파일
 ```

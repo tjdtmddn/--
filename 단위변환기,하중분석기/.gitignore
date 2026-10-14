@@ -1,0 +1,11 @@
+.venv/
+.venv-1/
+__pycache__/
+*.py[cod]
+*.log
+
+단위변환기/calculator_settings.json
+하중 분석기/load_result.csv
+하중 분석기/load_result.png
+하중 분석기/stress_plot.png
+단위변환기/*_history.csv

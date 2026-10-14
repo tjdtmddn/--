@@ -3,6 +3,7 @@ import csv
 import json
 import math
 import operator
+from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog, ttk
 
@@ -21,7 +22,7 @@ CATEGORIES = {
     "토크": {"N·m": (1, "뉴턴미터"), "kN·m": (1000, "킬로뉴턴미터"), "kgf·m": (9.80665, "킬로그램힘미터"), "lbf·ft": (1.3558179483314004, "파운드힘피트")},
 }
 TEMPERATURES = {"°C": "섭씨", "°F": "화씨", "K": "켈빈"}
-SETTINGS_FILE = "calculator_settings.json"
+SETTINGS_FILE = Path(__file__).with_name("calculator_settings.json")
 
 
 def convert_temperature(value, source, target):
